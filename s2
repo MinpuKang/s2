@@ -21,7 +21,7 @@ def ssh_command(node,user,host,port,password):
     print "User: %s"%user
     ssh = pexpect.spawn('ssh  %s@%s -p %s' % (user, host, port))
     try:
-        i = ssh.expect(['.*assword.*','.*Are you sure you want to continue connecting (yes/no)?',pexpect.EOF],timeout=5)
+        i = ssh.expect(['.*assword.*','.*Are you sure you want to continue connecting (yes/no)?'],timeout=5)
         if i == 0:
             ssh.sendline(password)
         elif i == 1:
