@@ -1,0 +1,107 @@
+﻿#!/usr/bin/env python
+#_*_ coding:utf-8 _*_
+#Version: 1.0
+#Author: Minpu Kang
+#Create Date:2016-09-03
+#Options:This is a common version in Linux/Unix Server with Python 2.7 or above.
+
+import sys
+import time
+import os
+import pexpect
+
+usr_home = os.path.expanduser('~')
+node_file="%s/nodes" % usr_home
+
+def ssh_command(node,user,host,port,password):
+    print "Start Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    print "Node: %s"%node
+    print "Host: %s"%host
+    print "User: %s"%user
+    ssh = pexpect.spawn('ssh  %s@%s -p %s' % (user, host, port))
+    try:
+        i = ssh.expect(['.*assword.*','.*Are you sure you want to continue connecting (yes/no)?',pexpect.EOF],timeout=5)
+        if i == 0:
+            ssh.sendline(password)
+        elif i == 1:
+            ssh.sendline('yes\n')
+            time.sleep(5)
+            ssh.expect('.*assword.*')
+            ssh.sendline(password)
+        title = "echo -ne \"\033]0;%s\007\";" %node
+        os.system(title)
+        ssh.interact()
+        ssh.close()
+    except pexpect.EOF:
+        print "EOF:Connection timed out. Please kindly check if node info is correct or not!"
+        ssh.close()
+    except pexpect.TIMEOUT:
+        print "TIMEOUT:Connection timed out. Please kindly check if node info is correct or not!"
+        ssh.close()
+
+#nodes information
+def login_node(nodes):
+    f = open(node_file, "rb")
+    f_line=f.readlines()
+    n_node=len(f_line)
+    j=1
+    for line in f_line:
+        node_info = line.strip("\r\n").split(",")
+        if node_info[0] == nodes:
+            child=ssh_command(node_info[0],node_info[2],node_info[1],node_info[4],node_info[3])
+            break
+        else:
+            if j == n_node:
+                print "No nodes matched"
+                print "Currently node list:",
+                for line1 in f_line:
+                    node_info1 = line1.strip("\r\n").split(",")
+                    print node_info1[0],
+                print "\n"
+        j+=1
+    f.close()
+
+def usage():
+    print "This is used for quickly login nodes based on special node name based on file:\"%s\""%node_file
+    print "Usage: s2 node [-h]"
+    print "Options:"
+    print "  node    Node     Set node name to login"
+    print "  -h      Help     Show the help\n"
+    print "Example:"
+    print "-----------------------------------\n"
+    print "  Login the node mme:"
+    print "  user@host$ s2 mme\n"
+    print "-----------------------------------\n"
+    print "Nodes info can be updated into file:%s"%node_file
+    print "Format in the file:node_name,ip,user,password,port"
+    print "Options:"
+    print "1.Node name must be unique in the file!"
+    print "2.if no special port,set default 22!"
+    print "3.password can be empty!"
+    print "An example without password:"
+    print "abc,1.1.1.1,admin,,22\n"
+    if os.path.exists(node_file):
+        print "Currently node list:",
+        f = open(node_file, "rb")
+        f_line=f.readlines()
+        for line in f_line:
+            node_info = line.strip("\r\n").split(",")
+            print node_info[0],
+        print "\n"
+    sys.exit(1)
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print "ERROR: missing node name"
+        usage()
+    else:
+        node_name = sys.argv[1]
+        if node_name=="-h":
+            usage()
+        else:
+            if os.path.exists(node_file):
+                login_node(node_name)
+            else:
+                print "Node file \"%s\" doesnot exist!"%node_file
+                usage()
+#finished
