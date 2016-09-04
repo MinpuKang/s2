@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 #_*_ coding:utf-8 _*_
 #Version: 1.0
 #Author: Minpu Kang
@@ -13,6 +13,7 @@ import pexpect
 usr_home = os.path.expanduser('~')
 node_file="%s/nodes" % usr_home
 
+#ssh to nodes
 def ssh_command(node,user,host,port,password):
     print "Start Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     print "Node: %s"%node
@@ -61,23 +62,23 @@ def login_node(nodes):
         j+=1
     f.close()
 
-def usage():
+def usage(s2name):
     print "This is used for quickly login nodes based on special node name based on file:\"%s\""%node_file
-    print "Usage: s2 node [-h]"
+    print "Usage: %s node [-h]"%s2name
     print "Options:"
     print "  node    Node     Set node name to login"
     print "  -h      Help     Show the help\n"
     print "Example:"
     print "-----------------------------------\n"
     print "  Login the node mme:"
-    print "  user@host$ s2 mme\n"
+    print "  user@host> %s mme\n"%s2name
     print "-----------------------------------\n"
     print "Nodes info can be updated into file:%s"%node_file
     print "Format in the file:node_name,ip,user,password,port"
     print "Options:"
     print "1.Node name must be unique in the file!"
-    print "2.if no special port,set default 22!"
-    print "3.password can be empty!"
+    print "2.If no special port,set default 22!"
+    print "3.Password can be empty!"
     print "An example without password:"
     print "abc,1.1.1.1,admin,,22\n"
     if os.path.exists(node_file):
@@ -91,17 +92,18 @@ def usage():
     sys.exit(1)
 
 if __name__ == '__main__':
+    s2name=(str(sys.argv[0][sys.argv[0].rfind(os.sep) + 1:]).split("/")[-1])
     if len(sys.argv) < 2:
         print "ERROR: missing node name"
-        usage()
+        usage(s2name)
     else:
         node_name = sys.argv[1]
         if node_name=="-h":
-            usage()
+            usage(s2name)
         else:
             if os.path.exists(node_file):
                 login_node(node_name)
             else:
                 print "Node file \"%s\" doesnot exist!"%node_file
-                usage()
+                usage(s2name)
 #finished
