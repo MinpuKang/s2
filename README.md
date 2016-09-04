@@ -3,7 +3,7 @@ ssh to nodes based on special node name, no need to remember IP/User/Password an
 
 s2 is based on the module pexpect in python.
 
-This is used for quickly login nodes based on special node name based on file:"<home>/nodes"
+This is used for quickly login nodes based on special node name based on file:"nodes"
 
 Usage: s2 node [-h]
 
@@ -23,7 +23,7 @@ Example:
 
 -----------------------------------
 
-Nodes info can be updated into file:<ome>/nodes
+Nodes info can be updated into file:nodes
 
 Format in the file:node_name,ip,user,password,port
 
