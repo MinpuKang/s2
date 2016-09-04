@@ -70,8 +70,8 @@ def usage(s2name):
     print "  -h      Help     Show the help\n"
     print "Example:"
     print "-----------------------------------\n"
-    print "  Login the node mme:"
-    print "  user@host> %s mme\n"%s2name
+    print "  Login the node abc:"
+    print "  user@host> %s abc\n"%s2name
     print "-----------------------------------\n"
     print "Nodes info can be updated into file:%s"%node_file
     print "Format in the file:node_name,ip,user,password,port"
