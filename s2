@@ -1,46 +1,45 @@
 #!/usr/bin/env python
 #_*_ coding:utf-8 _*_
-#Version: 1.0
+#Version: 2.0
 #Author: Minpu Kang
 #Create Date:2016-09-03
+#Modify Date:2016-09-05
+#Version 2 build at 2016-09-20
 #Options:This is a common version in Linux/Unix Server with Python 2.7 or above.
+#        Update the size Adaptive
+#        Version 2 is to fix the error of exiting ssh for some special action like Ctrl+C
 
 import sys
 import time
 import os
 import pexpect
+import struct
+import fcntl
+import termios
+import signal
 
 usr_home = os.path.expanduser('~')
 node_file="%s/nodes" % usr_home
 
-#ssh to nodes
-def ssh_command(node,user,host,port,password):
-    print "Start Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    print "Node: %s"%node
-    print "Host: %s"%host
-    print "User: %s"%user
-    ssh = pexpect.spawn('ssh  %s@%s -p %s' % (user, host, port))
-    try:
-        i = ssh.expect(['.*assword.*','.*Are you sure you want to continue connecting (yes/no)?'],timeout=5)
-        if i == 0:
-            ssh.sendline(password)
-        elif i == 1:
-            ssh.sendline('yes\n')
-            time.sleep(5)
-            ssh.expect('.*assword.*')
-            ssh.sendline(password)
-        title = "echo -ne \"\033]0;%s\007\";" %node
-        os.system(title)
-        ssh.interact()
-        ssh.close()
-    except pexpect.EOF:
-        print "EOF:Connection timed out. Please kindly check if node info is correct or not!"
-        ssh.close()
-    except pexpect.TIMEOUT:
-        print "TIMEOUT:Connection timed out. Please kindly check if node info is correct or not!"
-        ssh.close()
+#set the size
+def sigwinch_passthrough (sig, data):
+    winsize = getwinsize()
+    global ssh 
+    ssh.setwinsize(winsize[0],winsize[1])
 
-#nodes information
+def getwinsize():
+    """This returns the window size of the child tty.
+    The return value is a tuple of (rows, cols).
+    """
+    if 'TIOCGWINSZ' in dir(termios):
+        TIOCGWINSZ = termios.TIOCGWINSZ
+    else:
+        TIOCGWINSZ = 1074295912L # Assume
+    s = struct.pack('HHHH', 0, 0, 0, 0)
+    x = fcntl.ioctl(sys.stdout.fileno(), TIOCGWINSZ, s)
+    return struct.unpack('HHHH', x)[0:2]
+
+#nodes information and ssh to nodes
 def login_node(nodes):
     f = open(node_file, "rb")
     f_line=f.readlines()
@@ -49,7 +48,35 @@ def login_node(nodes):
     for line in f_line:
         node_info = line.strip("\r\n").split(",")
         if node_info[0] == nodes:
-            child=ssh_command(node_info[0],node_info[2],node_info[1],node_info[4],node_info[3])
+            node = node_info[0]
+            user = node_info[2]
+            host = node_info[1]
+            port = node_info[4]
+            password = node_info[3]
+            print "Start Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            print "Node: %s"%node
+            print "Host: %s"%host
+            print "User: %s"%user
+            ssh = pexpect.spawn('ssh  %s@%s -p %s' % (user, host, port))
+            signal.signal(signal.SIGWINCH, sigwinch_passthrough)
+            winsize = getwinsize();
+            ssh.setwinsize(winsize[0], winsize[1])
+            try: 
+                i = ssh.expect(['.*assword.*','.*Are you sure you want to continue connecting (yes/no)?'],timeout=5) 
+                if i == 0: 
+                    ssh.sendline(password) 
+                elif i == 1: 
+                    ssh.sendline('yes\n') 
+                    time.sleep(5) 
+                    ssh.expect('.*assword.*') 
+                    ssh.sendline(password) 
+                title = "echo -ne \"\033]0;%s\007\";" %node 
+                os.system(title) 
+            except pexpect.EOF: 
+                print "EOF:Connection timed out. Please kindly check if node info is correct or not!" 
+            except pexpect.TIMEOUT: 
+                print "TIMEOUT:Connection timed out. Please kindly check if node info is correct or not!" 
+            return ssh
             break
         else:
             if j == n_node:
@@ -70,8 +97,8 @@ def usage(s2name):
     print "  -h      Help     Show the help\n"
     print "Example:"
     print "-----------------------------------\n"
-    print "  Login the node abc:"
-    print "  user@host> %s abc\n"%s2name
+    print "  Login the node hk:"
+    print "  user@host> %s hk\n"%s2name
     print "-----------------------------------\n"
     print "Nodes info can be updated into file:%s"%node_file
     print "Format in the file:node_name,ip,user,password,port"
@@ -80,7 +107,7 @@ def usage(s2name):
     print "2.If no special port,set default 22!"
     print "3.Password can be empty!"
     print "An example without password:"
-    print "abc,1.1.1.1,admin,,22\n"
+    print "hk,192.168.10.5,admin,,22\n"
     if os.path.exists(node_file):
         print "Currently node list:",
         f = open(node_file, "rb")
@@ -102,7 +129,9 @@ if __name__ == '__main__':
             usage(s2name)
         else:
             if os.path.exists(node_file):
-                login_node(node_name)
+                ssh = login_node(node_name)
+                if ssh != None:
+                    ssh.interact()
             else:
                 print "Node file \"%s\" doesnot exist!"%node_file
                 usage(s2name)
