@@ -65,7 +65,7 @@ def login_node(nodes):
                 i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=5) 
                 if i == 0: 
                     ssh.sendline('yes') 
-					i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=5)
+                    i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=5)
                 if i == 1: 
                     ssh.sendline(password) 
                 title = "echo -ne \"\033]0;%s\007\";" %node 
