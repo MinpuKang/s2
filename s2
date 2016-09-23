@@ -62,20 +62,20 @@ def login_node(nodes):
             winsize = getwinsize();
             ssh.setwinsize(winsize[0], winsize[1])
             try: 
-                i = ssh.expect(['.*assword.*','.*Are you sure you want to continue connecting (yes/no)?'],timeout=5) 
+                i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=5) 
                 if i == 0: 
-                    ssh.sendline(password) 
-                elif i == 1: 
-                    ssh.sendline('yes\n') 
-                    time.sleep(5) 
-                    ssh.expect('.*assword.*') 
+                    ssh.sendline('yes') 
+					i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=5)
+                if i == 1: 
                     ssh.sendline(password) 
                 title = "echo -ne \"\033]0;%s\007\";" %node 
                 os.system(title) 
             except pexpect.EOF: 
                 print "EOF:Connection timed out. Please kindly check if node info is correct or not!" 
+                ssh.close()
             except pexpect.TIMEOUT: 
                 print "TIMEOUT:Connection timed out. Please kindly check if node info is correct or not!" 
+                ssh.close()
             return ssh
             break
         else:
@@ -90,7 +90,7 @@ def login_node(nodes):
     f.close()
 
 def usage(s2name):
-    print "This is used for quickly login nodes based on special node name based on file:\"%s\""%node_file
+    print "This is used for quickly login nodes based on special node name in the file:\"%s\""%node_file
     print "Usage: %s node [-h]"%s2name
     print "Options:"
     print "  node    Node     Set node name to login"
