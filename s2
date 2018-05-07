@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 #_*_ coding:utf-8 _*_
-#Version: 2.0
+#Version: 2.2
 #Author: Minpu Kang
 #Create Date:2016-09-03
-#Modify Date:2016-09-05
-#Version 2 build at 2016-09-20
+#Modify Date:2018-05-07
+#Version 2.2 build at 2018-05-07
 #Options:This is a common version in Linux/Unix Server with Python 2.7 or above.
 #        Update the size Adaptive
 #        Version 2 is to fix the error of exiting ssh for some special action like Ctrl+C
+#        Version 2.1 is to fix if any node cannot be login after reboot, reinstall or upgrading.
+#        Version 2.2 is to fix with new cli of ssh-keygen if any node cannot be login after reboot, reinstall or upgrading.
 
 import sys
 import time
@@ -17,9 +19,11 @@ import struct
 import fcntl
 import termios
 import signal
+import socket
 
 usr_home = os.path.expanduser('~')
 node_file="%s/nodes" % usr_home
+known_hosts_file="%s/.ssh/known_hosts" % usr_home
 
 #set the size
 def sigwinch_passthrough (sig, data):
@@ -57,18 +61,22 @@ def login_node(nodes):
             print "Node: %s"%node
             print "Host: %s"%host
             print "User: %s"%user
+            if os.path.exists(known_hosts_file):
+                #cmd_del_hosts = "sed -i \"/"+host+"/d\" "+known_hosts_file
+                cmd_del_hosts = "ssh-keygen -f \""+known_hosts_file+"\" -R "+host+" > /dev/null 2>&1"
+                os.system(cmd_del_hosts)
             ssh = pexpect.spawn('ssh  %s@%s -p %s' % (user, host, port))
-            signal.signal(signal.SIGWINCH, sigwinch_passthrough)
+            #signal.signal(signal.SIGWINCH, sigwinch_passthrough)
             winsize = getwinsize();
             ssh.setwinsize(winsize[0], winsize[1])
             try: 
-                i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=5) 
+                i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=60) 
                 if i == 0: 
                     ssh.sendline('yes') 
-                    i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=5)
+                    i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=60)
                 if i == 1: 
                     ssh.sendline(password) 
-                title = "echo -ne \"\033]0;%s\007\";" %node 
+                title = "echo -n \"\033]0;%s\007\";" %node 
                 os.system(title) 
             except pexpect.EOF: 
                 print "EOF:Connection timed out. Please kindly check if node info is correct or not!" 
@@ -116,7 +124,6 @@ def usage(s2name):
             node_info = line.strip("\r\n").split(",")
             print node_info[0],
         print "\n"
-    sys.exit(1)
 
 if __name__ == '__main__':
     s2name=(str(sys.argv[0][sys.argv[0].rfind(os.sep) + 1:]).split("/")[-1])
@@ -129,10 +136,15 @@ if __name__ == '__main__':
             usage(s2name)
         else:
             if os.path.exists(node_file):
-                ssh = login_node(node_name)
-                if ssh != None:
-                    ssh.interact()
+                isssh = login_node(node_name)
+                if isssh != None:
+                    isssh.interact()
+                    hostName = socket.gethostname()
+                    title = "echo -n \"\033]0;%s\007\";" %hostName
+                    os.system(title)
+                    print "End Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
             else:
                 print "Node file \"%s\" doesnot exist!"%node_file
                 usage(s2name)
+    sys.exit(1)
 #finished
