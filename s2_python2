@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 #_*_ coding:utf-8 _*_
-#Version: 2.2
+#Version: 2.4
 #Author: Minpu Kang
 #Create Date:2016-09-03
-#Modify Date:2018-05-07
-#Version 2.2 build at 2018-05-07
-#Options:This is a common version in Linux/Unix Server with Python 2.7 or above.
+#Version 2.4 build at 2018-12-05
+#Options:This is a common version in Linux/Unix Server with Python 2.7.
 #        Update the size Adaptive
 #        Version 2 is to fix the error of exiting ssh for some special action like Ctrl+C
 #        Version 2.1 is to fix if any node cannot be login after reboot, reinstall or upgrading.
 #        Version 2.2 is to fix with new cli of ssh-keygen if any node cannot be login after reboot, reinstall or upgrading.
+#        Version 2.3 is to fix login failed once the public key has transferred to remote server
+#        Version 2.4 is to support to mark the obsoleted nodes and sort the all node list
 
 import sys
 import time
@@ -24,6 +25,22 @@ import socket
 usr_home = os.path.expanduser('~')
 node_file="%s/nodes" % usr_home
 known_hosts_file="%s/.ssh/known_hosts" % usr_home
+
+#print all nodes
+def print_nodes():
+    f = open(node_file, "rb")
+    f_line=f.readlines()
+    node_list=[]
+    print "Currently node list:",
+    for line in f_line:
+        node_info = line.decode().strip("\r\n").split(",")
+        if node_info[0].startswith("#") == False:
+            node_list.append(node_info[0])
+    node_list.sort()
+    for i in node_list:
+        print i,
+    print ("\n")
+    f.close()
 
 #set the size
 def sigwinch_passthrough (sig, data):
@@ -70,10 +87,10 @@ def login_node(nodes):
             winsize = getwinsize();
             ssh.setwinsize(winsize[0], winsize[1])
             try: 
-                i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=60) 
+                i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*','.*Last login: *'],timeout=60)
                 if i == 0: 
                     ssh.sendline('yes') 
-                    i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*'],timeout=60)
+                    i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*','.*Last login: *'],timeout=60)
                 if i == 1: 
                     ssh.sendline(password) 
                 title = "echo -n \"\033]0;%s\007\";" %node 
@@ -89,11 +106,7 @@ def login_node(nodes):
         else:
             if j == n_node:
                 print "No nodes matched"
-                print "Currently node list:",
-                for line1 in f_line:
-                    node_info1 = line1.strip("\r\n").split(",")
-                    print node_info1[0],
-                print "\n"
+                print_nodes()
         j+=1
     f.close()
 
@@ -117,13 +130,7 @@ def usage(s2name):
     print "An example without password:"
     print "hk,192.168.10.5,admin,,22\n"
     if os.path.exists(node_file):
-        print "Currently node list:",
-        f = open(node_file, "rb")
-        f_line=f.readlines()
-        for line in f_line:
-            node_info = line.strip("\r\n").split(",")
-            print node_info[0],
-        print "\n"
+        print_nodes()
 
 if __name__ == '__main__':
     s2name=(str(sys.argv[0][sys.argv[0].rfind(os.sep) + 1:]).split("/")[-1])
