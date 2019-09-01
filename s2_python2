@@ -167,7 +167,7 @@ def cli_perform(node,user,host,port,password,cmd):
 
 def usage(s2name):
     print ("This is used for quickly login nodes based on special node name in the file:\"%s\""%node_file)
-    print ("Usage: %s node [-h]"%s2name)
+    print ("Usage: %s node [-h] [-c \"clis\"]"%s2name)
     print ("Options:")
     print ("  node    Node     Set node name to login")
     print ("  -h      Help     Show the help")
