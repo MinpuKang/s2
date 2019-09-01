@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 #_*_ coding:utf-8 _*_
-#Version: 2.4
+#Version: 3.0
 #Author: Minpu Kang
 #Create Date:2016-09-03
-#Version 2.4 build at 2018-12-05
+#Version 3.0 build at 2019-09-01
 #Options:This is a common version in Linux/Unix Server with Python 3.0 or above.
 #        Update the size Adaptive
 #        Version 2 is to fix the error of exiting ssh for some special action like Ctrl+C
@@ -11,6 +11,7 @@
 #        Version 2.2 is to fix with new cli of ssh-keygen if any node cannot be login after reboot, reinstall or upgrading.
 #        Version 2.3 is to fix login failed once the public key has transferred to remote server
 #        Version 2.4 is to support to mark the obsoleted nodes and sort the all node list
+#        Version 3.0 is to support perform clis followed in the remote node directly.
 
 import sys
 import time
@@ -21,6 +22,8 @@ import fcntl
 import termios
 import signal
 import socket
+import getopt
+import datetime
 
 usr_home = os.path.expanduser('~')
 node_file="%s/nodes" % usr_home
@@ -61,65 +64,121 @@ def getwinsize():
     return struct.unpack('HHHH', x)[0:2]
 
 #nodes information and ssh to nodes
-def login_node(nodes):
-    f = open(node_file, "rb")
-    f_line=f.readlines()
-    n_node=len(f_line)
-    j=1
-    for line in f_line:
-        node_info = line.decode().strip("\r\n").split(",")
-        if node_info[0] == nodes:
-            node = node_info[0]
-            user = node_info[2]
-            host = node_info[1]
-            port = node_info[4]
-            password = node_info[3]
-            print ("Start Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-            print ("Node: %s"%node)
-            print ("Host: %s"%host)
-            print ("User: %s"%user)
-            if os.path.exists(known_hosts_file):
-                #cmd_del_hosts = "sed -i \"/"+host+"/d\" "+known_hosts_file
-                cmd_del_hosts = "ssh-keygen -f \""+known_hosts_file+"\" -R "+host+" > /dev/null 2>&1"
-                os.system(cmd_del_hosts)
-            ssh = pexpect.spawn('ssh  %s@%s -p %s' % (user, host, port))
-            #signal.signal(signal.SIGWINCH, sigwinch_passthrough)
-            winsize = getwinsize();
-            ssh.setwinsize(winsize[0], winsize[1])
-            try: 
-                i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*','.*Last login: *'],timeout=60)
-                if i == 0: 
-                    ssh.sendline('yes') 
-                    i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*','.*Last login: *'],timeout=60)
-                if i == 1: 
-                    ssh.sendline(password) 
-                title = "echo -n \"\033]0;%s\007\";" %node 
-                os.system(title) 
-            except pexpect.EOF: 
-                print ("EOF:Connection timed out. Please kindly check if node info is correct or not!")
-                ssh.close()
-            except pexpect.TIMEOUT: 
-                print ("TIMEOUT:Connection timed out. Please kindly check if node info is correct or not!") 
-                ssh.close()
-            return ssh
-            break
-        else:
-            if j == n_node:
-                print ("No nodes matched")
-                print_nodes()
-        j+=1
-    f.close()
+def login_node(node,user,host,port,password):
+    print ("Start Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+    print ("Node: %s"%node)
+    print ("Host: %s"%host)
+    print ("User: %s"%user)
+    if os.path.exists(known_hosts_file):
+        #cmd_del_hosts = "sed -i \"/"+host+"/d\" "+known_hosts_file
+        cmd_del_hosts = "ssh-keygen -f \""+known_hosts_file+"\" -R "+host+" > /dev/null 2>&1"
+        os.system(cmd_del_hosts)
+    ssh = pexpect.spawn('ssh  %s@%s -p %s' % (user, host, port))
+    #signal.signal(signal.SIGWINCH, sigwinch_passthrough)
+    winsize = getwinsize();
+    ssh.setwinsize(winsize[0], winsize[1])
+    try: 
+        i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*','.*Last login: *'],timeout=60)
+        if i == 0: 
+            ssh.sendline('yes') 
+            i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*','.*Last login: *'],timeout=60)
+        if i == 1: 
+            ssh.sendline(password) 
+        title = "echo -n \"\033]0;%s\007\";" %node 
+        os.system(title) 
+    except pexpect.EOF: 
+        print ("EOF:Connection timed out. Please kindly check if node info is correct or not!")
+        ssh.close()
+    except pexpect.TIMEOUT: 
+        print ("TIMEOUT:Connection timed out. Please kindly check if node info is correct or not!") 
+        ssh.close()
+    return ssh
+
+def cli_perform(node,user,host,port,password,cmd):
+    if os.path.exists(known_hosts_file):
+        #cmd_del_hosts = "sed -i \"/"+host+"/d\" "+known_hosts_file
+        cmd_del_hosts = "ssh-keygen -f \""+known_hosts_file+"\" -R "+host+" > /dev/null 2>&1"
+        os.system(cmd_del_hosts)
+    ssh = pexpect.spawn('ssh  %s@%s -p %s' % (user, host, port))
+    try: 
+        i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*','.*Last login: *'],timeout=60)
+        if i == 0: 
+            ssh.sendline('yes') 
+            i = ssh.expect(['.*Are you sure you want to continue connecting (yes/no)?','.*assword.*','.*Last login: *'],timeout=60)
+        if i == 1: 
+            ssh.sendline(password) 
+    except pexpect.EOF: 
+        #print ("EOF:Connection timed out. Please kindly check if node info is correct or not!")
+        ssh.close()
+    except pexpect.TIMEOUT: 
+        #print ("TIMEOUT:Connection timed out. Please kindly check if node info is correct or not!") 
+        ssh.close()
+    prompt="\$"
+    ssh.expect(prompt)
+    ssh.buffer = "".encode()
+    ssh.sendline(cmd)
+    try:
+        ssh.expect(prompt)
+    except pexpect.EOF: 
+        print ("\n\n"+cmd+": command not found\n\n")
+        ssh.close()
+        return
+    except pexpect.TIMEOUT: 
+        print ("\n\n"+cmd+": command not found\n\n")
+        ssh.close()
+        return
+    result = ssh.before.strip().decode().split('\r\n')
+    print (result[-1]+prompt.split("\\")[-1]+" "+cmd)
+    for i in result[1:-1]:
+        print (i)
+    #print (ssh.before.strip().decode().replace('\r\n','\n'))
+    ssh.close()
+    
+    #prompt=""
+    #prompt_num=ssh.expect(['\$','\#','\>'])
+    #ssh.buffer = "".encode()
+    #if prompt_num == 0:
+    #    ssh.sendline(cmd)
+    #    prompt="$"
+    #elif prompt_num == 1:
+    #    ssh.sendline(cmd)
+    #    prompt="#"
+    #elif prompt_num == 2:
+    #    ssh.sendline(cmd)
+    #    prompt=">"
+    #try:
+    #    ssh.expect(['\$','\#','\>'])
+    #except pexpect.EOF: 
+    #    print ("\n\n"+cmd+": command not found\n\n")
+    #    ssh.close()
+    #    return
+    #except pexpect.TIMEOUT: 
+    #    print ("\n\n"+cmd+": command not found\n\n")
+    #    ssh.close()
+    #    return
+    #result = ssh.before.strip().decode().split('\r\n')
+    #print (result[-1]+prompt+" "+cmd)
+    #for i in result[1:-1]:
+    #    print (i)
+    ##print (ssh.before.strip().decode().replace('\r\n','\n'))
+    #ssh.close()
+    
+
 
 def usage(s2name):
     print ("This is used for quickly login nodes based on special node name in the file:\"%s\""%node_file)
     print ("Usage: %s node [-h]"%s2name)
     print ("Options:")
     print ("  node    Node     Set node name to login")
-    print ("  -h      Help     Show the help\n")
+    print ("  -h      Help     Show the help")
+    print ("  -c      CLI      Set the CLIs performed in remote server, more CLIs can added in double quotes and seperated with semicolon")
+    print ("                   For example: -c \"ls -l;date;hostname\"\n")
     print ("Example:")
     print ("-----------------------------------\n")
     print ("  Login the node hk:")
     print ("  user@host> %s hk\n"%s2name)
+    print ("  Login the node hk and perform clis:")
+    print ("  user@host> %s hk -c \"ls -l;date;hostname\"\n"%s2name)
     print ("-----------------------------------\n")
     print ("Nodes info can be updated into file:%s"%node_file)
     print ("Format in the file:node_name,ip,user,password,port")
@@ -138,20 +197,61 @@ if __name__ == '__main__':
         print ("ERROR: missing node name")
         usage(s2name)
     else:
-        node_name = sys.argv[1]
-        if node_name=="-h":
+        args = sys.argv[1:]
+        node = ""
+        user = ""
+        host = ""
+        port = ""
+        password = ""
+        cli = ""
+        if "-h" in args:
             usage(s2name)
         else:
             if os.path.exists(node_file):
-                isssh = login_node(node_name)
-                if isssh != None:
-                    isssh.interact()
-                    hostName = socket.gethostname()
-                    title = "echo -n \"\033]0;%s\007\";" %hostName
-                    os.system(title)
-                    print ("End Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+                f = open(node_file, "rb")
+                f_line=f.readlines()
+                for i in args:
+                    for line in f_line:
+                        node_info = line.decode().strip("\r\n").split(",")
+                        if i == node_info[0]:
+                            node = node_info[0]
+                            user = node_info[2]
+                            host = node_info[1]
+                            port = node_info[4]
+                            password = node_info[3]
+                            break
+                f.close
             else:
                 print ("Node file \"%s\" doesnot exist!"%node_file)
                 usage(s2name)
+                sys.exit(1)
+            ### check if cli set or not
+            for j in range(0,(len(args)-1)):
+                if args[j] == "-c" and j < len(args)-1:
+                    cli += args[j+1]+";"
+                    
+            if node == "":
+                print ("No nodes matched")
+                print_nodes()
+                sys.exit(1)
+            elif len(cli) == 0:
+               isssh = login_node(node,user,host,port,password)
+               if isssh != None:
+                   isssh.interact()
+                   hostName = socket.gethostname()
+                   title = "echo -n \"\033]0;%s\007\";" %hostName
+                   os.system(title)
+                   print ("End Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+            elif node != "" and cli != "":
+                cli_args = cli.split(";")
+                print ("====Start Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())+"====\n")
+                print ("Node: "+node+", Host: "+host+"\n")
+                for cmd in cli_args:
+                    if cmd != "":
+                        cli_perform(node,user,host,port,password,cmd)
+                        #cli_perform(node, host, port, user, password, cmd)
+                        #print (cli_printout)
+                print ("\n====End Date and Time: "+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())+"====")
     sys.exit(1)
 #finished
+
