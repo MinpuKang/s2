@@ -21,11 +21,16 @@ Options:
 Example:
 -----------------------------------
 
+
   Login the node hk:
+  
   user@host> s2 abc
 
+
   Login the node hk and perform clis:
+  
   user@host> s2 abc -c "ls -l;date;hostname"
+
 
 -----------------------------------
 
