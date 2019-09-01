@@ -22,12 +22,12 @@ Example:
 -----------------------------------
 
 
-  Login the node hk:
+  Login the node abc:
   
   user@host> s2 abc
 
 
-  Login the node hk and perform clis:
+  Login the node abc and perform clis:
   
   user@host> s2 abc -c "ls -l;date;hostname"
 
