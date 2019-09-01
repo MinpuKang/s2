@@ -10,9 +10,13 @@ Usage: s2 node [-h] [-c "clis"]
 Options:
 
   node    Node     Set node name to login
+  
   -h      Help     Show the help
+  
   -c      CLIs     Set the CLIs performed in remote server, more CLIs can added in double quotes and seperated with semicolon
+  
                    For example: -c "ls -l;date;hostname"  
+
 
 Example:
 -----------------------------------
