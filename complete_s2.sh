@@ -4,6 +4,8 @@ vi /usr/share/bash-completion/bash_completion
 or
 /etc/bash_completion.d/apport_completion (in ubuntu)
 
+######Below are the bash completion for the version before 3.X
+
 # s2(1) completion
 #
 _login_s2()
@@ -22,6 +24,9 @@ _login_s2()
 }
 complete -F _login_s2 $filenames s2
 
+
+
+###Below are the bash completion for the latest version 3.X
 
 # s2(1) completion
 #
@@ -47,3 +52,5 @@ _login_s2()
     fi
 }
 complete -F _login_s2 $filenames s2
+
+

@@ -1,0 +1,14 @@
+####
+Dowload： https://pypi.org/project/ptyprocess/
+
+tar -xvf ptyprocess-x.x.x.tar.gz 
+cd ptyprocess-x.x.x/
+python3 setup.py install
+
+
+####
+Dowload： https://pypi.org/project/pexpect/
+
+tar -xvf pexpect-x.x.x.tar.gz
+cd pexpect-x.x.x/
+python3 setup.py install
