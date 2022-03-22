@@ -3,6 +3,7 @@ ssh to nodes based on special node name, no need to remember IP/User/Password an
 
 s2 is based on the module pexpect in python.
 
+```
 This is used for quickly login nodes based on special node name based on file:"nodes"
 
 Usage: s2 node [-h] [-c "clis"]
@@ -51,3 +52,4 @@ An example without password:
 abc,1.1.1.1,admin,,22
 
 Currently node list: abc xyz hk hk1 
+```
